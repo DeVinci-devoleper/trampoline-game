@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Trampoline Terror Clone - Random Levels + Legend (FINAL WORKING)</title>
+    <title>Trampoline Terror Clone - Exit Tile Update</title>
     <style>
         body {
             background: #202028;
@@ -49,7 +49,7 @@
         .hud-value { font-size: 20px; text-align: right; color: #FFD700; font-weight: bold; font-family: monospace; }
         .controls-hint { color: #44FF44; font-weight: bold; }
 
-        /* Стиль для экрана победы и сообщения */
+        /* Стиль для экрана победы */
         #victory-screen {
             position: absolute;
             top: 0;
@@ -69,6 +69,12 @@
             opacity: 0;
             transition: opacity 1s;
         }
+        .victory-text {
+            color: #44FF44;
+            margin-bottom: 20px;
+        }
+
+        /* Стиль для сообщения о разблокировке выхода */
         #exit-unlocked-message {
             position: absolute;
             top: 20px;
@@ -82,36 +88,12 @@
             opacity: 0;
             transition: opacity 0.5s;
         }
-
-        /* Легенда */
-        #legend {
-            margin-top: 20px;
-            padding: 10px;
-            width: 400px;
-            background: #333;
-            border: 1px solid #666;
-            border-radius: 5px;
-            text-align: left;
-            font-size: 12px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        .legend-color {
-            width: 15px;
-            height: 15px;
-            margin-right: 10px;
-            border: 1px solid #000;
-            box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
-        }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <h2>Trampoline Terror: Random Levels + Legend (FINAL WORKING)</h2>
+        <h2>Trampoline Terror: Exit Tile Update</h2>
         <canvas id="gameCanvas" width="400" height="400"></canvas>
         
         <div id="exit-unlocked-message">
@@ -120,49 +102,13 @@
 
         <div id="victory-screen">
             <div class="victory-text">ПОБЕДА!</div>
-            <div>ВЫ ПРОШЛИ 5 СЛУЧАЙНЫХ УРОВНЕЙ!</div>
+            <div>ВЫ ПРОШЛИ ИГРУ!</div>
             <div style="font-size: 18px; color: #ccc; margin-top: 20px;">Поздравляем!</div>
         </div>
 
         <div class="ui-info">
             <p>Перемещение: <b>Стрелки</b> | Прыжок: <b>Пробел</b></p>
             <p class="controls-hint">Атака: Клавиша Z (Тратит P-Ball)</p>
-        </div>
-
-        <div id="legend">
-            <h3 style="margin-top: 0; color: #FFD700;">ЛЕГЕНДА</h3>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #44FF44;"></div> 
-                Трамплин (3 жизни)
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #FF4444;"></div> 
-                Трамплин (1 жизнь)
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #111; border: none; box-shadow: none;"></div> 
-                Дыра (Опасно!)
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #A020F0;"></div> 
-                Выход (6) - Активируется после выполнения цели
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #FFFF00;"></div> 
-                **Switch (5) - ЦЕЛЬ УРОВНЯ!** (Собери все)
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #4080FF;"></div> 
-                P-Ball (4) - Боеприпасы (Синий)
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #00CC00;"></div> 
-                **Враг** (Зеленый квадрат)
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #FFFFFF;"></div> 
-                Снаряд P-Ball (Белый круг)
-            </div>
         </div>
     </div>
 
@@ -181,7 +127,7 @@
         </div>
         <div class="hud-block">
             <div class="hud-label">SWITCHES</div>
-            <div id="switch-count" class="hud-value">0</div>
+            <div id="switch-count" class="hud-value">10</div>
         </div>
         <div class="hud-block" style="border: 1px solid #4080FF;">
             <div class="hud-label" style="color: #4080FF">P-BALL (AMMO)</div>
@@ -199,18 +145,61 @@
     const TILE_SIZE = 40; 
     const COLS = 10;
     const ROWS = 10;
-    const MAX_LEVELS = 5; 
 
-    const ENEMY_COLOR = '#00CC00'; 
-    const MOVE_SPEED = 0.1; 
-
+    // 0: Дырка, 1-3: Трамплин, 4: P-Ball, 5: Switch, 6: EXIT, 9: Бетон
     const COLORS = {
         0: '#111', 1: '#FF4444', 2: '#FFD700', 3: '#44FF44', 
-        4: '#4080FF', 
-        5: '#FFFF00', 
-        6: '#A020F0', 
-        9: '#888888' 
+        4: '#4080FF', 5: '#AAAAAA', 
+        6: '#A020F0', // НОВАЯ ПЛИТКА: ЯРКО-ФИОЛЕТОВЫЙ (EXIT)
+        9: '#888888'
     };
+
+    // --- ДАННЫЕ УРОВНЕЙ ---
+    const LEVELS = [
+        // Level 1: Введение
+        {
+            mapData: [
+                [9,9,9,9,9,9,9,9,9,9],
+                [9,3,3,3,9,3,3,3,3,9],
+                [9,3,5,3,9,3,4,4,3,9], 
+                [9,3,3,3,0,3,3,3,3,9],
+                [9,9,9,9,9,9,9,9,9,9],
+                [9,3,3,3,3,3,3,3,3,9],
+                [9,3,1,1,1,1,1,1,3,9],
+                [9,3,3,3,3,3,3,3,6,9], // <--- Плитка EXIT (6)
+                [9,9,9,9,9,9,9,9,9,9],
+                [9,9,9,9,9,9,9,9,9,9]
+            ],
+            playerStart: { x: 1, y: 1 },
+            switchesTotal: 1,
+            enemiesStart: [
+                { x: 6, y: 6, direction: 1, speed: 0.03 },
+                { x: 2, y: 7, direction: 1, speed: 0.05 }
+            ]
+        },
+        // Level 2: Финал
+        {
+            mapData: [
+                [9,9,9,9,9,9,9,9,9,9],
+                [9,1,2,3,3,3,2,1,9,9],
+                [9,0,3,1,0,3,1,3,9,9],
+                [9,3,5,3,4,3,3,5,9,9], 
+                [9,9,9,0,9,0,9,9,9,9],
+                [9,3,3,3,3,3,3,3,3,9],
+                [9,1,0,1,0,1,0,1,3,9],
+                [9,3,3,3,3,3,3,3,6,9], // <--- Плитка EXIT (6)
+                [9,9,9,9,9,9,9,9,9,9],
+                [9,9,9,9,9,9,9,9,9,9]
+            ],
+            playerStart: { x: 1, y: 1 },
+            switchesTotal: 2,
+            enemiesStart: [
+                { x: 2, y: 6, direction: 1, speed: 0.05 },
+                { x: 7, y: 6, direction: -1, speed: 0.05 },
+                { x: 5, y: 1, direction: 1, speed: 0.07 }
+            ]
+        }
+    ];
 
     let currentLevelIndex = 0;
     let map = [];
@@ -220,8 +209,7 @@
     let pBalls = 5; 
     let gameOver = false;
     let gameWon = false;
-    let exitEnabled = false; 
-    let playerStartPos = { x: 1, y: 1 };
+    let exitEnabled = false; // НОВЫЙ ФЛАГ: Разблокирован ли выход
 
     // --- ИГРОК ---
     const player = {
@@ -235,145 +223,55 @@
     let projectiles = []; 
     let explosions = [];  
 
-    // Объект для отслеживания нажатых клавиш
     const keys = {};
     let zKeyPressed = false; 
 
     // --- УПРАВЛЕНИЕ ---
-    // Убедимся, что window.keys не конфликтует с локальным объектом keys
-    window.addEventListener('keydown', e => { 
-        keys[e.code] = true;
-        // Отменяем действие по умолчанию для стрелок и пробела
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
-            e.preventDefault();
-        }
-    });
+    window.addEventListener('keydown', e => keys[e.code] = true);
     window.addEventListener('keyup', e => {
         keys[e.code] = false;
         if (e.code === 'KeyZ') zKeyPressed = false; 
     });
 
-    // =========================================================
-    // ГЕНЕРАЦИЯ СЛУЧАЙНЫХ ДАННЫХ 
-    // =========================================================
-
-    function getRandomInt(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-    function generateRandomMap() {
-        const newMap = [];
-        const floorTiles = [];
-        
-        for (let y = 0; y < ROWS; y++) {
-            newMap[y] = [];
-            for (let x = 0; x < COLS; x++) {
-                if (x === 0 || x === COLS - 1 || y === 0 || y === ROWS - 1) {
-                    newMap[y][x] = 9;
-                } else {
-                    if (Math.random() < 0.7) {
-                        newMap[y][x] = 3; 
-                        floorTiles.push({ x, y });
-                    } else {
-                        newMap[y][x] = 0;
-                    }
-                }
-            }
-        }
-
-        const requiredFloorTiles = floorTiles.filter(t => t.x !== 1 || t.y !== 1);
-        newMap[1][1] = 3; 
-        playerStartPos = { x: 1, y: 1 };
-        const totalSwitches = getRandomInt(1, 3);
-        const totalPballs = getRandomInt(1, 2);
-        switchesRemaining = totalSwitches;
-
-        const itemsToPlace = [
-            ...Array(totalSwitches).fill(5), 
-            ...Array(totalPballs).fill(4)
-        ];
-
-        while (itemsToPlace.length > 0 && requiredFloorTiles.length > 0) {
-            const index = getRandomInt(0, requiredFloorTiles.length - 1);
-            const { x, y } = requiredFloorTiles[index];
-            
-            newMap[y][x] = itemsToPlace.pop();
-            requiredFloorTiles.splice(index, 1);
-        }
-        
-        if (requiredFloorTiles.length > 0) {
-            const index = getRandomInt(0, requiredFloorTiles.length - 1);
-            const { x, y } = requiredFloorTiles[index];
-            newMap[y][x] = 6;
-        } else {
-            newMap[1][2] = 6;
-        }
-
-        return newMap;
-    }
-
-    function generateRandomEnemies() {
-        const enemiesStart = [];
-        const floorTiles = [];
-
-        for (let y = 1; y < ROWS - 1; y++) {
-            for (let x = 1; x < COLS - 1; x++) {
-                const type = map[y][x];
-                if (type !== 0 && type !== 9 && (x !== playerStartPos.x || y !== playerStartPos.y)) {
-                    floorTiles.push({ x, y });
-                }
-            }
-        }
-        
-        const numEnemies = getRandomInt(2, 4);
-
-        for (let i = 0; i < numEnemies && floorTiles.length > 0; i++) {
-            const index = getRandomInt(0, floorTiles.length - 1);
-            const { x, y } = floorTiles[index];
-
-            enemiesStart.push({
-                x: x, 
-                y: y, 
-                direction: Math.random() < 0.5 ? 1 : -1,
-                speed: getRandomInt(3, 8) / 100,
-                moveProgress: 0 // Убеждаемся, что прогресс начинается с 0
-            });
-            floorTiles.splice(index, 1);
-        }
-
-        return enemiesStart;
-    }
-
-
-    // =========================================================
-    // ЛОГИКА ИГРЫ
-    // =========================================================
+    // --- ФУНКЦИИ ЛОГИКИ И УРОВНЕЙ ---
 
     function loadLevel(levelIndex) {
-        if (levelIndex >= MAX_LEVELS) {
+        if (levelIndex >= LEVELS.length) {
             handleGameWin();
             return;
         }
+
+        const levelData = LEVELS[levelIndex];
         currentLevelIndex = levelIndex;
         
-        map = generateRandomMap();
-        enemies = generateRandomEnemies();
+        // 1. Загрузка карты (Создаем копию)
+        map = levelData.mapData.map(row => [...row]); 
 
-        player.x = playerStartPos.x;
-        player.y = playerStartPos.y;
+        // 2. Сброс игрока
+        player.x = levelData.playerStart.x;
+        player.y = levelData.playerStart.y;
         player.targetX = player.x;
         player.targetY = player.y;
         player.moving = false;
         player.isJumping = false;
-        player.moveProgress = 0; // Сброс прогресса движения
         player.lastDx = 1;
         player.lastDy = 0;
+
+        // 3. Инициализация врагов
+        enemies = levelData.enemiesStart.map(e => ({
+            ...e,
+            moveProgress: 0, 
+            targetX: e.x, 
+            targetY: e.y 
+        }));
         
+        // 4. Сброс состояния уровня
+        switchesRemaining = levelData.switchesTotal;
         projectiles = [];
         explosions = [];
         gameOver = false;
         gameWon = false;
-        exitEnabled = false; 
+        exitEnabled = false; // Выход заблокирован в начале уровня
         victoryScreen.style.opacity = 0;
         exitMessage.style.opacity = 0;
 
@@ -383,16 +281,17 @@
     function updateHUD() {
         document.getElementById('score').innerText = score.toString().padStart(5, '0');
         document.getElementById('lives').innerText = lives;
-        document.getElementById('stage').innerText = currentLevelIndex + 1; 
+        document.getElementById('stage').innerText = currentLevelIndex + 1;
         document.getElementById('switch-count').innerText = switchesRemaining;
         document.getElementById('pball-count').innerText = pBalls;
     }
     
+    // НОВАЯ ЛОГИКА: Проверка, разблокирован ли выход
     function checkExitUnlock() {
+        // Условие: Собраны все свитчи И убиты все враги
         if (switchesRemaining === 0 && enemies.length === 0 && !exitEnabled) {
             exitEnabled = true;
-            exitMessage.innerText = "ВЫХОД РАЗБЛОКИРОВАН! Найдите фиолетовую плитку!";
-            exitMessage.style.backgroundColor = 'rgba(0, 150, 255, 0.8)';
+            // Показываем сообщение
             exitMessage.style.opacity = 1;
             setTimeout(() => { exitMessage.style.opacity = 0; }, 3000);
         }
@@ -406,10 +305,12 @@
 
     function handleHit() {
         if (gameOver || gameWon) return;
+
         lives--;
         if (lives <= 0) {
             gameOver = true;
             alert("Game Over! Попробуйте снова.");
+            // Перезагрузка всей игры
             currentLevelIndex = 0;
             lives = 3;
             score = 0;
@@ -418,16 +319,17 @@
             return;
         }
         
-        player.x = playerStartPos.x; 
-        player.y = playerStartPos.y;
-        player.targetX = player.x; player.targetY = player.y;
+        // Сброс игрока на стартовую позицию текущего уровня
+        const start = LEVELS[currentLevelIndex].playerStart;
+        player.x = start.x; player.y = start.y;
+        player.targetX = start.x; player.targetY = start.y;
         player.moving = false;
         player.isJumping = false;
-        player.moveProgress = 0; // Сброс прогресса движения
         
         updateHUD();
     }
     
+    // Приземление - Главная механика игры
     function landOnTile(gx, gy) {
         const tileType = map[gy][gx];
 
@@ -443,53 +345,77 @@
             switchesRemaining = Math.max(0, switchesRemaining - 1);
             score += 100;
             map[gy][gx] = 9;
-            checkExitUnlock(); 
+            checkExitUnlock(); // Проверяем, разблокирован ли выход
         } else if (tileType === 4) { 
             pBalls += 3; 
             score += 50; 
             map[gy][gx] = 9;
-        } else if (tileType === 6) { 
+        } else if (tileType === 6) { // НОВАЯ ЛОГИКА: Плитка EXIT
             if (exitEnabled) {
+                 // Переход на следующий уровень с небольшой задержкой для плавности
                 setTimeout(() => {
                     loadLevel(currentLevelIndex + 1);
                 }, 100); 
             } else {
+                // Выход заблокирован
                 exitMessage.innerText = "Сначала нужно собрать все SWITCHES и убить всех врагов!";
                 exitMessage.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
                 exitMessage.style.opacity = 1;
                 setTimeout(() => { exitMessage.style.opacity = 0; }, 3000);
+                exitMessage.style.backgroundColor = 'rgba(0, 150, 255, 0.8)'; // Сброс цвета
             }
         }
 
         updateHUD();
     }
     
-    function triggerJump() { player.isJumping = true; }
-
+    // ЛОГИКА КОЛЛИЗИИ СНАРЯДОВ
     function updateProjectiles() {
         for (let i = 0; i < projectiles.length; i++) {
             let p = projectiles[i];
             if (!p.active) continue;
+
             p.progress += p.speed;
+
             if (p.progress >= 1) {
-                p.x += p.dx; p.y += p.dy; p.progress = 0;
+                p.x += p.dx;
+                p.y += p.dy;
+                p.progress = 0;
+
+                // Проверка границ/стен
                 if (p.x < 0 || p.x >= COLS || p.y < 0 || p.y >= ROWS || map[p.y][p.x] === 9) {
-                    p.active = false; continue;
+                    p.active = false; 
+                    continue;
                 }
             }
+
+            // Коллизия с ВРАГАМИ
             let pRenderX = (p.x * TILE_SIZE) + (p.dx * TILE_SIZE * p.progress) + TILE_SIZE / 2;
             let pRenderY = (p.y * TILE_SIZE) + (p.dy * TILE_SIZE * p.progress) + TILE_SIZE / 2;
+
             for (let j = 0; j < enemies.length; j++) {
                 let e = enemies[j];
+                
                 let eRenderX = e.x * TILE_SIZE;
-                if (e.moveProgress > 0) { eRenderX += (e.targetX - e.x) * TILE_SIZE * e.moveProgress; }
-                let eCenterY = e.y * TILE_SIZE + TILE_SIZE / 2;
-                let dist = Math.hypot(pRenderX - (eRenderX + TILE_SIZE / 2), pRenderY - eCenterY);
+                let eRenderY = e.y * TILE_SIZE;
+                
+                if (e.moveProgress > 0) {
+                    eRenderX += (e.targetX - e.x) * TILE_SIZE * e.moveProgress;
+                }
+                
+                let eCenterX = eRenderX + TILE_SIZE / 2;
+                let eCenterY = eRenderY + TILE_SIZE / 2;
+
+                let dist = Math.hypot(pRenderX - eCenterX, pRenderY - eCenterY);
+                
                 if (dist < TILE_SIZE / 2) { 
+                    // ПОПАДАНИЕ!
                     p.active = false;
                     enemies.splice(j, 1); 
                     createExplosion(e.x, e.y); 
-                    score += 200; updateHUD(); checkExitUnlock(); 
+                    score += 200;
+                    updateHUD();
+                    checkExitUnlock(); // Проверяем, разблокирован ли выход
                     break;
                 }
             }
@@ -503,17 +429,19 @@
     function updateExplosions() {
         for (let i = explosions.length - 1; i >= 0; i--) {
             explosions[i].timer--;
-            if (explosions[i].timer <= 0) { explosions.splice(i, 1); }
+            if (explosions[i].timer <= 0) {
+                explosions.splice(i, 1);
+            }
         }
     }
-
+    function triggerJump() { player.isJumping = true; }
 
     // --- ОСНОВНОЙ ЦИКЛ ИГРЫ (UPDATE) ---
 
     function update() {
         if (gameOver || gameWon) return;
 
-        // 1. Логика стрельбы
+        // 1. Логика стрельбы (Z)
         if (keys['KeyZ'] && !zKeyPressed && pBalls > 0) {
             pBalls--;
             projectiles.push({
@@ -526,7 +454,7 @@
         updateProjectiles();
         updateExplosions();
 
-        // 2. Логика врагов (Движение)
+        // 2. Логика врагов
         enemies.forEach(enemy => {
             if (enemy.moveProgress > 0) {
                 enemy.moveProgress += enemy.speed;
@@ -536,10 +464,9 @@
             } else {
                 let nextX = enemy.x + enemy.direction;
                 if (nextX >= 0 && nextX < COLS && map[enemy.y][nextX] !== 0 && map[enemy.y][nextX] !== 9) {
-                    enemy.targetX = nextX; 
-                    enemy.moveProgress = 0.01; 
+                    enemy.targetX = nextX; enemy.moveProgress = 0.01;
                 } else {
-                    enemy.direction *= -1; 
+                    enemy.direction *= -1;
                 }
             }
         });
@@ -558,57 +485,36 @@
             }
         }
         
-        // 4. Логика движения Игрока (ВВОД)
+        // 4. Логика движения Игрока
         if (!player.moving && !player.isJumping) {
             let dx = 0, dy = 0;
-            // Проверяем, какая стрелка нажата, и устанавливаем направление
             if (keys['ArrowUp']) dy = -1;
             else if (keys['ArrowDown']) dy = 1;
             else if (keys['ArrowLeft']) dx = -1;
             else if (keys['ArrowRight']) dx = 1;
 
-            if (dx !== 0 || dy !== 0) { 
-                player.lastDx = dx; player.lastDy = dy; 
-                
+            if (dx !== 0 || dy !== 0) { player.lastDx = dx; player.lastDy = dy; }
+            if (keys['Space']) triggerJump();
+
+            if (dx !== 0 || dy !== 0) {
                 const nextX = player.x + dx;
                 const nextY = player.y + dy;
-                
-                // Проверяем, что следующая клетка не стена (9)
-                if (nextX >= 0 && nextX < COLS && nextY >= 0 && nextY < ROWS && map[nextY][nextX] !== 9) {
+                if (nextX >= 0 && nextX < COLS && nextY >= 0 && nextY < ROWS) {
                     player.targetX = nextX; player.targetY = nextY;
-                    player.moving = true; 
-                    triggerJump(); // Прыжок запускается при начале движения
+                    player.moving = true; triggerJump();
                 }
-            } else if (keys['Space']) {
-                // Прыжок на месте, если нет движения
-                triggerJump(); 
             }
         }
 
         // 5. Анимация движения/прыжка
         if (player.moving || player.isJumping) {
-            // Движение вперед, если moving=true
-            if (player.moving) {
-                player.moveProgress += MOVE_SPEED; 
-            } else if (player.isJumping && player.moveProgress < 0.5) {
-                // Если только прыгаем на месте, даем ему небольшой прогресс
-                 player.moveProgress += 0.05; 
-            }
-            
-            // Расчет высоты прыжка
+            player.moveProgress += 0.1; 
             player.jumpHeight = Math.sin(player.moveProgress * Math.PI) * 15;
-            
-            // Завершение хода
             if (player.moveProgress >= 1) {
                 player.x = player.targetX; player.y = player.targetY;
                 player.moving = false; player.isJumping = false;
                 player.moveProgress = 0; player.jumpHeight = 0;
                 landOnTile(player.x, player.y);
-            } else if (!player.moving && player.isJumping && player.moveProgress >= 0.5) {
-                // Если был прыжок на месте, быстро сбрасываем его
-                player.isJumping = false;
-                player.moveProgress = 0;
-                player.jumpHeight = 0;
             }
         }
     }
@@ -618,13 +524,14 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Отрисовка карты
+        // Карта
         for (let y = 0; y < ROWS; y++) {
             for (let x = 0; x < COLS; x++) {
                 const t = map[y][x];
                 ctx.fillStyle = COLORS[t];
                 ctx.fillRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
                 
+                // Рисуем индикатор для EXIT плитки
                 if (t === 6 && exitEnabled) {
                     ctx.fillStyle = '#FFFFFF';
                     ctx.beginPath();
@@ -640,18 +547,18 @@
             }
         }
 
-        // Отрисовка врагов
+        // Враги
         enemies.forEach(e => {
             let rx = e.x * TILE_SIZE, ry = e.y * TILE_SIZE;
             if (e.moveProgress > 0) {
                 rx += (e.targetX - e.x) * TILE_SIZE * e.moveProgress;
                 ry += (e.targetY - e.y) * TILE_SIZE * e.moveProgress;
             }
-            ctx.fillStyle = ENEMY_COLOR; 
+            ctx.fillStyle = '#00FFFF';
             ctx.fillRect(rx + 8, ry + 8, 24, 24);
         });
 
-        // Отрисовка снарядов
+        // Снаряды
         ctx.fillStyle = '#FFF';
         projectiles.forEach(p => {
             let px = (p.x * TILE_SIZE) + (p.dx * TILE_SIZE * p.progress) + 20;
@@ -659,7 +566,7 @@
             ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
         });
 
-        // Отрисовка взрывов
+        // Взрывы
         ctx.fillStyle = '#FFA500';
         explosions.forEach(e => {
             let ex = e.x * TILE_SIZE + 20;
@@ -669,7 +576,7 @@
             ctx.beginPath(); ctx.arc(ex, ey, 10, 0, Math.PI*2); ctx.fill();
         });
 
-        // Отрисовка игрока
+        // Игрок
         let px = player.x * TILE_SIZE, py = player.y * TILE_SIZE;
         if (player.moving) {
             px += (player.targetX - player.x) * TILE_SIZE * player.moveProgress;
@@ -686,15 +593,15 @@
         ctx.beginPath(); ctx.arc(eyeX, eyeY, 4, 0, Math.PI*2); ctx.fill();
     }
 
-    // --- ГЛАВНЫЙ ЦИКЛ И АНИМАЦИЯ ---
     function loop() {
         update();
         draw();
-        requestAnimationFrame(loop); 
+        requestAnimationFrame(loop);
     }
 
+    // --- СТАРТ ИГРЫ ---
     loadLevel(currentLevelIndex);
-    loop(); 
+    loop();
 </script>
 </body>
 </html>
