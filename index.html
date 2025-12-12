@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Trampoline Terror Clone - Random Levels + Legend (ОБНОВЛЕННАЯ ВЕРСИЯ)</title>
+    <title>Trampoline Terror Clone - Random Levels + Legend (ФИНАЛ)</title>
     <style>
         body {
             background: #202028;
@@ -113,7 +113,7 @@
 <body>
 
     <div id="game-container">
-        <h2>Trampoline Terror: Random Levels + Legend (ОБНОВЛЕННАЯ ВЕРСИЯ)</h2>
+        <h2>Trampoline Terror: Random Levels + Legend (ФИНАЛ)</h2>
         <canvas id="gameCanvas" width="400" height="400"></canvas>
         
         <div id="exit-unlocked-message">
@@ -165,6 +165,10 @@
                 <div class="legend-color" style="background: #00CC00;"></div> 
                 **Враг.** Передвигается по случайным направлениям.
             </div>
+             <div class="legend-item">
+                <div class="legend-color" style="background: #44FF44; border: 1px solid #999;"></div> 
+                **Область 9 (Граница).** Теперь проходима и выглядит как трамплин.
+            </div>
         </div>
     </div>
 
@@ -206,13 +210,13 @@
     const ENEMY_COLOR = '#00CC00'; 
     const MOVE_SPEED = 0.1; 
 
-    // ОБНОВЛЕННЫЕ ЦВЕТА: 5 (SWITCH) изменен на Темно-оранжевый
+    // ОБНОВЛЕННЫЕ ЦВЕТА: 5 (SWITCH) оранжевый, 9 (СТЕНА) теперь зеленый, как трамплин
     const COLORS = {
         0: '#111', 1: '#FF4444', 2: '#FFD700', 3: '#44FF44', 
         4: '#4080FF', 
-        5: '#FF8C00', // НОВЫЙ ЦВЕТ ДЛЯ SWITCH
+        5: '#FF8C00', // SWITCH
         6: '#A020F0', 
-        9: '#888888' 
+        9: '#44FF44' // СТЕНЫ теперь выглядят как зеленые трамплины (CODE 3)
     };
 
     let currentLevelIndex = 0;
@@ -241,7 +245,7 @@
     const keys = {};
     let zKeyPressed = false; 
 
-    // --- КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: ОБРАБОТЧИКИ НА document.body ---
+    // --- ОБРАБОТЧИКИ НА document.body ---
     document.body.addEventListener('keydown', e => { 
         keys[e.code] = true;
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
@@ -267,7 +271,7 @@
             newMap[y] = [];
             for (let x = 0; x < COLS; x++) {
                 if (x === 0 || x === COLS - 1 || y === 0 || y === ROWS - 1) {
-                    newMap[y][x] = 9; // Стена
+                    newMap[y][x] = 9; // Граница/Стена (теперь проходима)
                 } else {
                     if (Math.random() < 0.7) {
                         newMap[y][x] = 3; // Трамплин (Зеленый)
@@ -286,8 +290,8 @@
         const totalPballs = getRandomInt(1, 2);
         switchesRemaining = totalSwitches;
         const itemsToPlace = [
-            ...Array(totalSwitches).fill(5), // Switch
-            ...Array(totalPballs).fill(4)  // P-Ball
+            ...Array(totalSwitches).fill(5), 
+            ...Array(totalPballs).fill(4)  
         ];
         
         // Расставляем Switch и P-Ball
@@ -316,8 +320,8 @@
         for (let y = 1; y < ROWS - 1; y++) {
             for (let x = 1; x < COLS - 1; x++) {
                 const type = map[y][x];
-                // Ищем безопасные места для врагов
-                if (type !== 0 && type !== 9 && (x !== playerStartPos.x || y !== playerStartPos.y)) {
+                // Разрешаем спаун на плитках, кроме дыр и стартовой позиции игрока
+                if (type !== 0 && (x !== playerStartPos.x || y !== playerStartPos.y)) {
                     floorTiles.push({ x, y });
                 }
             }
@@ -332,9 +336,9 @@
             enemiesStart.push({
                 x: x, 
                 y: y, 
-                targetX: x, // Начальная цель равна текущей позиции
+                targetX: x, 
                 targetY: y,
-                speed: getRandomInt(4, 9) / 100, // Случайная скорость
+                speed: getRandomInt(4, 9) / 100, 
                 moveProgress: 0 
             });
             floorTiles.splice(index, 1);
@@ -395,18 +399,19 @@
             return;
         }
         
+        // Разрушение плиток
         if (tileType >= 1 && tileType <= 3) {
             map[gy][gx] -= 1; 
             score += 10;
         } else if (tileType === 5) { 
             switchesRemaining = Math.max(0, switchesRemaining - 1);
             score += 100;
-            map[gy][gx] = 9; // Switch заменяется на стену после сбора
+            map[gy][gx] = 9; 
             checkExitUnlock(); 
         } else if (tileType === 4) { 
             pBalls += 3; 
             score += 50; 
-            map[gy][gx] = 9; // P-Ball заменяется на стену после сбора
+            map[gy][gx] = 9; 
         } else if (tileType === 6) { 
             if (exitEnabled) {
                 setTimeout(() => { loadLevel(currentLevelIndex + 1); }, 100); 
@@ -430,12 +435,10 @@
             p.progress += p.speed;
             if (p.progress >= 1) {
                 p.x += p.dx; p.y += p.dy; p.progress = 0;
-                // Проверяем на стену или границу
-                if (p.x < 0 || p.x >= COLS || p.y < 0 || p.y >= ROWS || map[p.y][p.x] === 9) {
+                // Снаряды не должны исчезать на плитке 9, т.к. она теперь проходима
+                if (p.x < 0 || p.x >= COLS || p.y < 0 || p.y >= ROWS) {
                     p.active = false; continue;
                 }
-                // Снаряд попадает в дыру, но не исчезает, чтобы дать возможность поразить врага над ней
-                // if (map[p.y][p.x] === 0) { p.active = false; continue; } 
             }
             let pRenderX = (p.x * TILE_SIZE) + (p.dx * TILE_SIZE * p.progress) + TILE_SIZE / 2;
             let pRenderY = (p.y * TILE_SIZE) + (p.dy * TILE_SIZE * p.progress) + TILE_SIZE / 2;
@@ -445,7 +448,6 @@
                 let eRenderY = e.y * TILE_SIZE;
                 
                 if (e.moveProgress > 0) { 
-                     // Интерполяция позиции врага
                      eRenderX += (e.targetX - e.x) * TILE_SIZE * e.moveProgress; 
                      eRenderY += (e.targetY - e.y) * TILE_SIZE * e.moveProgress; 
                 }
@@ -547,7 +549,8 @@
                 const nextX = player.x + dx;
                 const nextY = player.y + dy;
                 
-                if (nextX >= 0 && nextX < COLS && nextY >= 0 && nextY < ROWS && map[nextY][nextX] !== 9) {
+                // ИЗМЕНЕНИЕ ЗДЕСЬ: УДАЛЕНО УСЛОВИЕ map[nextY][nextX] !== 9
+                if (nextX >= 0 && nextX < COLS && nextY >= 0 && nextY < ROWS) {
                     player.targetX = nextX; player.targetY = nextY;
                     player.moving = true; 
                     triggerJump(); 
@@ -578,7 +581,7 @@
             }
         }
         
-        // 4. Логика врагов (Обновлено на случайное движение)
+        // 4. Логика врагов 
         enemies.forEach(enemy => {
             if (enemy.moveProgress > 0) {
                 // Анимация движения
@@ -589,20 +592,19 @@
                     enemy.x = enemy.targetX; enemy.y = enemy.targetY; enemy.moveProgress = 0;
                 }
             } else {
-                // Выбираем случайное направление: вверх, вниз, влево, вправо
+                // Выбираем случайное направление
                 const directions = [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1}];
                 const {dx, dy} = directions[getRandomInt(0, 3)];
                 
                 let nextX = enemy.x + dx;
                 let nextY = enemy.y + dy;
 
-                // Проверяем, что плитка не стена и не дыра, и находится внутри границ
-                if (nextX > 0 && nextX < COLS - 1 && nextY > 0 && nextY < ROWS - 1 && map[nextY][nextX] !== 0 && map[nextY][nextX] !== 9) {
+                // Проверяем, что плитка не дыра (0) и находится внутри границ
+                if (nextX > 0 && nextX < COLS - 1 && nextY > 0 && nextY < ROWS - 1 && map[nextY][nextX] !== 0) {
                     enemy.targetX = nextX; 
                     enemy.targetY = nextY;
                     enemy.moveProgress = 0.01; 
                 }
-                // Если направление невалидно, враг ждет до следующего цикла, чтобы попробовать другое случайное направление.
             }
         });
         
@@ -610,7 +612,6 @@
         const isPlayerSafe = player.jumpHeight > 10;
         if (!isPlayerSafe) {
              for (const enemy of enemies) {
-                // Проверяем, находится ли враг на текущей или целевой клетке игрока
                 const enemyOnPlayerTile = (player.x === enemy.x && player.y === enemy.y);
                 const enemyMovingThroughPlayerTile = (player.moving && player.targetX === enemy.x && player.targetY === enemy.y);
                 
@@ -654,8 +655,8 @@
                     // Рисуем значок P-Ball
                     ctx.fillStyle = '#FFF';
                     ctx.beginPath(); ctx.arc(x*TILE_SIZE+20, y*TILE_SIZE+20, 8, 0, Math.PI*2); ctx.fill();
-                } else if (t >= 1 && t <= 3) {
-                    // Рисуем узоры на трамплинах
+                } else if (t >= 1 && t <= 3 || t === 9) { // t===9 теперь выглядит как трамплин
+                    // Рисуем узоры на трамплинах и бывших стенах
                     ctx.fillStyle = 'rgba(0,0,0,0.2)';
                     ctx.beginPath(); ctx.arc(x*TILE_SIZE+20, y*TILE_SIZE+20, 5, 0, Math.PI*2); ctx.fill();
                 }
